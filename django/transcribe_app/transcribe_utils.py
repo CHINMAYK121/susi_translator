@@ -8,10 +8,14 @@ import numpy as np
 import threading
 import requests
 import logging
-import whisper
+try:
+    import whisper
+    import torch
+    HAS_WHISPER = True
+except ImportError:
+    HAS_WHISPER = False
 import base64
 import queue
-import torch
 import json
 import time
 from scipy.io.wavfile import write as wav_write
@@ -43,7 +47,7 @@ if use_whisper_server:
     # ./server -m models/ggml-medium.bin -l de -p 16 -t 32 --host 0.0.0.0 --port 8007
     # ./server -m models/ggml-large-v3.bin -l de -p 16 -t 32 --host 0.0.0.0 --port 8007
     whisper_server = os.getenv('WHISPER_SERVER', 'https://whisper.susi.ai')
-else:
+elif HAS_WHISPER:
     # Download a whisper model. If the download using the whisper library is not possible
     # i.e. if you are offline or behind a firewall, you can also use locally stored models.
     # To use a local model, download a model from the links as listed in
@@ -64,6 +68,8 @@ else:
         model_smart = whisper.load_model(model_smart_name, in_memory=True, download_root=models_path)
     else:
         model_smart = whisper.load_model(model_smart_name, in_memory=True)
+else:
+    logger.warning("Whisper/Torch not installed. Transcription will not work without a whisper server.")
 
 def add_to_audio_stack(tenant_id, chunk_id, audio_b64, translate_from, translate_to):
     """
